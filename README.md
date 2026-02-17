@@ -189,7 +189,6 @@ graphrag_mcp/
 ├── diagnose_data.py           # Diagnostic script for data validation
 ├── mcp_start.bat              # Windows: Start Docker + MCP server
 ├── mcp_stop.bat               # Windows: Stop all services
-├── run_server.sh              # Unix: Run MCP server
 └── pyproject.toml             # Python dependencies
 ```
 
@@ -351,12 +350,18 @@ The GraphRAG MCP server works with any MCP-compatible client, including VS Code,
 
 ### Cursor Integration
 
-1. **Open Cursor settings** and navigate to MCP configuration or edit directly:
+1. **Locate your Cursor configuration file:**
 
-   **Location:**
+   **macOS/Linux:**
 
    ```
    ~/.cursor/mcp.json
+   ```
+
+   **Windows:**
+
+   ```
+   %APPDATA%\Cursor\mcp.json
    ```
 
 2. **Add the configuration:**
@@ -365,17 +370,11 @@ The GraphRAG MCP server works with any MCP-compatible client, including VS Code,
    {
      "mcpServers": {
        "GraphRAG": {
-         "command": "/path/to/graphrag_mcp/run_server.sh",
-         "args": []
+         "command": "uv",
+         "args": ["--directory", "/path/to/graphrag_mcp", "run", "main.py"]
        }
      }
    }
-   ```
-
-   Make the script executable:
-
-   ```bash
-   chmod +x run_server.sh
    ```
 
 3. **Restart Cursor**
