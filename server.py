@@ -83,23 +83,29 @@ def get_page(doc_id: str, start_page: int, end_page: int = None) -> dict:
     return doc_tool.get_page_content(doc_id, start_page, end_page)
 
 @mcp.tool()
-def get_document_info(doc_id: str) -> dict:
-    """Get comprehensive information about a document.
+
+def get_document_info(doc_id: str, max_pages: int = 20) -> dict:
+    """Get document Table of Contents (first few pages) and statistics.
     
     Args:
         doc_id: Document identifier (e.g., 'core_spec', 'application_spec')
+        max_pages: Maximum number of pages to return (default 20, enough for TOC)
     
     Returns:
         Dict with:
-        - chunks: List of all page chunks with their page ranges
+        - chunks: List of first max_pages chunks (typically covers TOC)
         - stats: Statistics including:
-            - total_chunks: Total number of page chunks
+            - total_chunks: Total number of page chunks in document
             - merged_chunks: Number of chunks created from merging small pages
             - next_relationships: Sequential page links
             - discusses_relationships: Semantic similarity links
             - total_relationships: Sum of all relationships
+        - is_truncated: True if document has more pages than returned
+        - max_pages_returned: Actual max_pages limit used
+    
+    Note: To retrieve specific pages, use get_page() instead.
     """
-    return doc_tool.get_document_info(doc_id)
+    return doc_tool.get_document_info(doc_id, max_pages)
 
 @mcp.resource("https://graphrag.db/schema/neo4j")
 def get_graph_schema() -> str:

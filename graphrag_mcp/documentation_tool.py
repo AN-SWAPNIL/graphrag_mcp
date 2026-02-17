@@ -463,8 +463,16 @@ class DocumentationGPTTool:
         
         return result
     
-    def get_document_info(self, doc_id: str) -> Dict[str, Any]:
-        """Get all chunks from a document and intra-doc relationship stats."""
+    def get_document_info(self, doc_id: str, max_pages: int = 20) -> Dict[str, Any]:
+        """Get document TOC (first few pages) and intra-doc relationship stats.
+        
+        Args:
+            doc_id: Document identifier
+            max_pages: Maximum number of pages to return (default 20 for TOC)
+        
+        Returns:
+            Dict with first max_pages chunks (TOC) and document statistics
+        """
         result = {
             'doc_id': doc_id,
             'chunks': [],
@@ -475,6 +483,8 @@ class DocumentationGPTTool:
                 'discusses_relationships': 0,
                 'total_relationships': 0
             },
+            'max_pages_returned': max_pages,
+            'is_truncated': False,
             'error': None
         }
         
@@ -484,13 +494,14 @@ class DocumentationGPTTool:
         
         try:
             with self.neo4j_driver.session() as session:
-                # Get all pages
+                # Get first N pages (TOC)
                 res = session.run("""
                     MATCH (d:Document {id: $doc_id})-[:CONTAINS]->(p:Page)
                     RETURN p.id as id, p.chunk_idx as idx, p.text as text,
                            p.page_range_str as page_range_str, p.is_merged as is_merged
                     ORDER BY idx
-                """, doc_id=doc_id)
+                    LIMIT $max_pages
+                """, doc_id=doc_id, max_pages=max_pages)
                 
                 merged_count = 0
                 for rec in res:
@@ -499,13 +510,21 @@ class DocumentationGPTTool:
                         'chunk_idx': rec['idx'],
                         'page_range': rec['page_range_str'],
                         'is_merged': rec['is_merged'],
-                        'text': rec['text'][:150] if rec['text'] else 'N/A'
+                        'text': rec['text']  # Full page content
                     })
                     if rec['is_merged']:
                         merged_count += 1
                 
-                result['stats']['total_chunks'] = len(result['chunks'])
+                # Get total count
+                total_res = session.run("""
+                    MATCH (d:Document {id: $doc_id})-[:CONTAINS]->(p:Page)
+                    RETURN count(p) as total
+                """, doc_id=doc_id)
+                total_count = total_res.single()['total']
+                
+                result['stats']['total_chunks'] = total_count
                 result['stats']['merged_chunks'] = merged_count
+                result['is_truncated'] = len(result['chunks']) < total_count
                 
                 # Count NEXT_PAGE relationships
                 res = session.run("""
@@ -532,7 +551,7 @@ class DocumentationGPTTool:
                     result['stats']['discusses_relationships']
                 )
                 
-                logger.info(f"Got info for document {doc_id}")
+                logger.info(f"Got TOC for document {doc_id} (returned {len(result['chunks'])}/{total_count} pages)")
         
         except Exception as e:
             result['error'] = str(e)

@@ -46,7 +46,7 @@ except:
 
 def split_by_pages(content, min_words=50):
     """
-    Split document by page boundaries, merging pages with < min_words.
+    Split document by page boundaries ("Page N" on standalone line), merging pages with < min_words.
     """
     raw_pages = []
     current_page = []
@@ -54,35 +54,34 @@ def split_by_pages(content, min_words=50):
     
     lines = content.split('\n')
     
-    # Step 1: Extract all pages
+    # Step 1: Extract all pages - split at every "Page N" line
     for line in lines:
-        start_match = re.match(r'^Page\s+(\d+)\b', line.strip())
-        end_match = re.search(r'\bPage\s+(\d+)$', line.strip())
+        # Check if line is exactly "Page N" (standalone page marker)
+        page_match = re.match(r'^Page\s+(\d+)\s*$', line.strip())
         
-        if start_match or end_match:
-            page_num = int(start_match.group(1) if start_match else end_match.group(1))
-            current_page.append(line)
-            
-            if current_page:
+        if page_match:
+            # Save previous page if exists
+            if current_page and current_page_num is not None:
                 page_text = '\n'.join(current_page).strip()
                 if page_text:
                     raw_pages.append({
-                        'page_num': page_num,
+                        'page_num': current_page_num,
                         'text': page_text,
                         'word_count': len(page_text.split())
                     })
             
-            current_page = []
-            current_page_num = page_num
+            # Start new page
+            current_page_num = int(page_match.group(1))
+            current_page = [line]  # Include the "Page N" line
         else:
             current_page.append(line)
     
     # Handle trailing content
-    if current_page:
+    if current_page and current_page_num is not None:
         page_text = '\n'.join(current_page).strip()
         if page_text:
             raw_pages.append({
-                'page_num': current_page_num or 0,
+                'page_num': current_page_num,
                 'text': page_text,
                 'word_count': len(page_text.split())
             })
@@ -194,8 +193,7 @@ for file_path in md_files:
             id=point_id,
             vector=embedding,
             payload={
-                "text": page_text[:1000],
-                "full_text": page_text,
+                "text": page_text,
                 "doc": doc_id,
                 "chunk_idx": len(chunks_list) - 1,
                 "page_num": page_num,
@@ -258,7 +256,7 @@ with driver.session() as s:
                 "page_range": page_range,
                 "page_range_str": page_range_str,
                 "idx": chunk['chunk_idx'],
-                "text": chunk['text'][:1000],
+                "text": chunk['text'],
                 "word_count": len(chunk['text'].split()),
                 "is_merged": chunk['is_merged']
             })
