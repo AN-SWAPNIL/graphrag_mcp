@@ -209,7 +209,7 @@ class DocumentationGPTTool:
                         'id': rec['id'],
                         'chunk_idx': rec['idx'],
                         'page_range': rec['page_range_str'],
-                        'text': rec['text'][:200] if rec['text'] else 'N/A'
+                        'text': rec['text'] if rec['text'] else 'N/A'
                     })
                 
                 # Find PREVIOUS pages (backward sequential)
@@ -224,7 +224,7 @@ class DocumentationGPTTool:
                         'id': rec['id'],
                         'chunk_idx': rec['idx'],
                         'page_range': rec['page_range_str'],
-                        'text': rec['text'][:200] if rec['text'] else 'N/A'
+                        'text': rec['text'] if rec['text'] else 'N/A'
                     })
                 
                 # Find RELATED_TO pages (semantic similarity within document)
@@ -241,7 +241,7 @@ class DocumentationGPTTool:
                         'id': rec['id'],
                         'chunk_idx': rec['idx'],
                         'page_range': rec['page_range_str'],
-                        'text': rec['text'][:200] if rec['text'] else 'N/A',
+                        'text': rec['text'] if rec['text'] else 'N/A',
                         'shared_keywords': rec['keywords'] or [],
                         'distance': rec['distance']
                     })
